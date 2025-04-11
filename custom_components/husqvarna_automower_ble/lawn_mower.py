@@ -41,7 +41,7 @@ async def async_setup_entry(
         [
             AutomowerLawnMower(
                 coordinator,
-                "automower" + model + "_" + address,
+                f"automower_{model}_{address}",
                 model,
                 FEATURES,
             ),
@@ -73,24 +73,25 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
     def _get_activity(self) -> LawnMowerActivity | None:
         """Return the current lawn mower activity."""
-        if self.coordinator.data is None:
+        if not self.coordinator.data:
+            _LOGGER.warning("Coordinator data is unavailable")
             return None
 
-        state = str(self.coordinator.data["state"])
-        activity = str(self.coordinator.data["activity"])
+        state = self.coordinator.data.get("state")
+        activity = self.coordinator.data.get("activity")
 
-        _LOGGER.debug("mower state = " + state)
-        _LOGGER.debug("mower activity = " + activity)
+        _LOGGER.debug(f"Mower state: {state}, Mower activity: {activity}")
 
         if state is None or activity is None:
             return None
-        match state:
+
+        match str(state):
             case "5":
                 return LawnMowerActivity.PAUSED
             case "2" | "0" | "1":
                 return LawnMowerActivity.ERROR
             case "7" | "6" | "4":
-                match activity:
+                match str(activity):
                     case "1" | "5":
                         return LawnMowerActivity.DOCKED
                     case "2" | "3":
@@ -104,12 +105,13 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug("AutomowerLawnMower: _handle_coordinator_update")
+        _LOGGER.debug("Handling coordinator update for AutomowerLawnMower")
         self._update_attr()
         super()._handle_coordinator_update()
 
     @callback
     def _update_attr(self) -> None:
+        """Update mower attributes."""
         self._attr_activity = self._get_activity()
         self._attr_available = self._attr_activity is not None
 
@@ -118,10 +120,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         _LOGGER.debug("Starting mower")
 
         if not self.coordinator.mower.is_connected():
-            device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
-            )
-            if not await self.coordinator.mower.connect(device):
+            if not await self._connect_to_mower():
                 return
 
         await self.coordinator.mower.mower_resume()
@@ -134,13 +133,10 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
     async def async_dock(self) -> None:
         """Start docking."""
-        _LOGGER.debug("Start docking")
+        _LOGGER.debug("Docking mower")
 
         if not self.coordinator.mower.is_connected():
-            device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
-            )
-            if not await self.coordinator.mower.connect(device):
+            if not await self._connect_to_mower():
                 return
 
         await self.coordinator.mower.mower_park()
@@ -154,10 +150,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         _LOGGER.debug("Pausing mower")
 
         if not self.coordinator.mower.is_connected():
-            device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
-            )
-            if not await self.coordinator.mower.connect(device):
+            if not await self._connect_to_mower():
                 return
 
         await self.coordinator.mower.mower_pause()
@@ -165,3 +158,19 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
+
+    async def _connect_to_mower(self) -> bool:
+        """Attempt to connect to the mower."""
+        _LOGGER.debug("Attempting to connect to mower")
+        device = bluetooth.async_ble_device_from_address(
+            self.coordinator.hass, self.coordinator.address, connectable=True
+        )
+        if not device:
+            _LOGGER.error("Failed to find BLE device for mower")
+            return False
+
+        if not await self.coordinator.mower.connect(device):
+            _LOGGER.error("Failed to connect to mower")
+            return False
+
+        return True

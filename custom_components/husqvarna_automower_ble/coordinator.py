@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=300)
 
 
-class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
+class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching data."""
 
     def __init__(
@@ -49,113 +49,73 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
         self.mower = mower
         self.channel_id = channel_id
         self.serial = serial
-        self._last_successful_update = None
-        self._last_data = None
+        self._last_successful_update: datetime | None = None
+        self._last_data: dict[str, Any] | None = None
 
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and any connection."""
-        _LOGGER.debug("Shutdown")
+        _LOGGER.debug("Shutting down coordinator")
         await super().async_shutdown()
         if self.mower.is_connected():
             await self.mower.disconnect()
 
-    async def _async_find_device(self):
-        _LOGGER.debug("Trying to reconnect")
+    async def _async_find_device(self) -> None:
+        """Attempt to reconnect to the device."""
+        _LOGGER.debug("Attempting to reconnect to the device")
         await close_stale_connections_by_address(self.address)
 
-        _LOGGER.debug("bluetooth connect...")
         device = bluetooth.async_ble_device_from_address(
             self.hass, self.address, connectable=True
         )
-        _LOGGER.debug("back from async_ble_device_from_address")
         if not device:
-            _LOGGER.debug("Can't find device")
+            _LOGGER.error("Failed to find device with address: %s", self.address)
             raise UpdateFailed("Can't find device")
 
         try:
             if not await self.mower.connect(device):
-                _LOGGER.debug("failed to connect in self.mower.connect")
+                _LOGGER.error("Failed to connect to the mower")
                 raise UpdateFailed("Failed to connect")
         except (TimeoutError, BleakError) as ex:
-            _LOGGER.debug("except hit from ble connect")
+            _LOGGER.error("Error during connection attempt: %s", ex)
             raise UpdateFailed("Failed to connect") from ex
 
-    async def _async_update_data(self) -> dict[str, bytes]:
-        """Poll the device."""
-        _LOGGER.debug("Polling device")
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Poll the device for updated data."""
+        _LOGGER.debug("Polling device for data")
 
-        data: dict[str, bytes] = {}
+        data: dict[str, Any] = {}
 
         try:
             if not self.mower.is_connected():
                 await self._async_find_device()
-        except (TimeoutError, BleakError) as ex:
-            raise UpdateFailed("Failed to connect") from ex
 
-        try:
+            # Fetch data from the mower
             data["battery_level"] = await self.mower.battery_level()
-            _LOGGER.debug("battery level: " + str(data["battery_level"]))
-            #            if data["battery_level"] is None:
-            #                await self._async_find_device()
-            #                raise UpdateFailed("Error getting data from device")
-
-            data["activity"] = await self.mower.mower_activity()
-            _LOGGER.debug("activity: " + str(data["activity"]))
-            #            if data["activity"] is None:
-            #                await self._async_find_device()
-            #                raise UpdateFailed("Error getting data from device")
-
+            data["mode"] = await self.mower.mower_mode()
             data["state"] = await self.mower.mower_state()
-            _LOGGER.debug("state: " + str(data["state"]))
-            #            if data["state"] is None:
-            #                await self._async_find_device()
-            #                raise UpdateFailed("Error getting data from device")
-
+            data["activity"] = await self.mower.mower_activity()
             data["next_start_time"] = await self.mower.mower_next_start_time()
-            _LOGGER.debug("next_start_time: " + str(data["next_start_time"]))
-            #            if data["next_start_time"] is None:
-            #                await self._async_find_device()
-            #                raise UpdateFailed("Error getting data from device")
-
-            data["errorCode"] = await self.mower.command("GetError")
-            _LOGGER.debug("errorCode: " + str(data["errorCode"]))
-
-            data["NumberOfMessages"] = await self.mower.command("GetNumberOfMessages")
-            _LOGGER.debug("NumberOfMessages: " + str(data["NumberOfMessages"]))
-
             data["RemainingChargingTime"] = await self.mower.command(
                 "GetRemainingChargingTime"
             )
-            _LOGGER.debug(
-                "RemainingChargingTime: " + str(data["RemainingChargingTime"])
-            )
-
             data["statistics"] = await self.mower.command("GetAllStatistics")
-            _LOGGER.debug("statuses: " + str(data["statistics"]))
-
-            data["operatorstate"] = await self.mower.command("IsOperatorLoggedIn")
-            _LOGGER.debug("IsOperatorLoggedIn: " + str(data["operatorstate"]))
-
-            data["last_message"] = await self.mower.command("GetMessage", messageId=0)
-            _LOGGER.debug("last_message: " + str(data["last_message"]))
 
             self._last_successful_update = datetime.now()
             self._last_data = data
 
-        except (TimeoutError, BleakError) as ex:
-            _LOGGER.error("Error getting data from device")
-            if self._last_data and (
-                datetime.now() - self._last_successful_update < timedelta(hours=1)
-            ):
-                _LOGGER.debug(
-                    "Failed to fetch data, using last known good values from the past 1hr"
-                )
-                return self._last_data
-            else:
-                await self._async_find_device()
-                raise UpdateFailed("Error getting data from device") from ex
+            _LOGGER.debug("Successfully polled data: %s", data)
 
-        _LOGGER.debug("return from coordinator with data")
+        except (TimeoutError, BleakError) as ex:
+            _LOGGER.error("Error fetching data from device: %s", ex)
+            if self._last_data and self._last_successful_update:
+                if datetime.now() - self._last_successful_update < timedelta(hours=1):
+                    _LOGGER.warning(
+                        "Using cached data due to fetch failure within the last hour"
+                    )
+                    return self._last_data
+            await self._async_find_device()
+            raise UpdateFailed("Error fetching data from device") from ex
+
         return data
 
 
