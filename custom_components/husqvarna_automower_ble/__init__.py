@@ -44,11 +44,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device = bluetooth.async_ble_device_from_address(
         hass, address, connectable=True
     ) or await get_device(address)
-    ##
-    LOGGER.debug("device %s", device)
-    if not device:
-        raise ConfigEntryNotReady("Device not present")
-    ##
     try:
         if not await mower.connect(device):
             raise ConfigEntryNotReady("Couldn't find device")

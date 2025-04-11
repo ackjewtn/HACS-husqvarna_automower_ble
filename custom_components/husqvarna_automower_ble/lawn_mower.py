@@ -163,4 +163,3 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
-

@@ -119,4 +119,3 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors
         )
-
