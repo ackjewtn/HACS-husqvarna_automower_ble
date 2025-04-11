@@ -67,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Retrieve mower details
     try:
         model = await mower.get_model()
-        serial = await mower.get_serial_number()
+        serial = await mower.command("GetSerialNumber")
         LOGGER.info(f"Connected to Automower: {model} (Serial: {serial})")
     except Exception as ex:
         LOGGER.exception(f"Failed to retrieve mower details: {ex}")
