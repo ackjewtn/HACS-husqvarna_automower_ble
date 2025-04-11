@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from automower_ble.mower import Mower
-from bleak import BleakError
+from bleak import BleakError, BleakScanner
 from bleak_retry_connector import close_stale_connections_by_address, get_device
 
 from homeassistant.components import bluetooth
@@ -43,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug("connecting to %s with channel ID %s and pin %s", address, str(channel_id), str(pin))
     device = bluetooth.async_ble_device_from_address(
         hass, address, connectable=True
-    ) or await get_device(address)
+    ) or await BleakScanner.find_device_by_address(mower.address, timeout=30)
     try:
         if not await mower.connect(device):
             raise ConfigEntryNotReady("Couldn't find device")
