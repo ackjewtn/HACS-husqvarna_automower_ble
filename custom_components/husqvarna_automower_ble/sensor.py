@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE,UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import EntityCategory
@@ -135,6 +135,7 @@ MOWER_SENSORS = [
     ),
 ]
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -143,17 +144,27 @@ async def async_setup_entry(
     """Set up AutomowerLawnMower sensor from a config entry."""
     coordinator: HusqvarnaCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     _LOGGER.debug("Creating mower sensors")
-    sensors = [AutomowerSensorEntity(coordinator, description, "automower_" + format_mac(coordinator.address)) for description in MOWER_SENSORS]
-    #_LOGGER.debug("About to add sensors: " + str(sensors))
+    sensors = [
+        AutomowerSensorEntity(
+            coordinator, description, "automower_" + format_mac(coordinator.address)
+        )
+        for description in MOWER_SENSORS
+    ]
+    # _LOGGER.debug("About to add sensors: " + str(sensors))
     if not sensors:
         _LOGGER.error("No sensors were created. Check MOWER_SENSORS.")
     async_add_entities(sensors)
 
-class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
 
+class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self,coordinator: HusqvarnaCoordinator, description: SensorEntityDescription, mower_id: str) -> None:
+    def __init__(
+        self,
+        coordinator: HusqvarnaCoordinator,
+        description: SensorEntityDescription,
+        mower_id: str,
+    ) -> None:
         """Set up AutomowerSensors."""
         super().__init__(coordinator)
         self.entity_description = description
@@ -168,12 +179,17 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         self._entity_category = description.entity_category
         self._description = description.name
         self._attributes = {"description": description.name, "last_updated": None}
-#        self._attr_extra_state_attributes = {"last_updated": None}
+        #        self._attr_extra_state_attributes = {"last_updated": None}
 
-        _LOGGER.debug("in AutomowerSensorEntity creating entity for: " + str(self._name) + "with unique_id: " + str(self._attr_unique_id))
+        _LOGGER.debug(
+            "in AutomowerSensorEntity creating entity for: "
+            + str(self._name)
+            + "with unique_id: "
+            + str(self._attr_unique_id)
+        )
 
-#        super().__init__(coordinator)
-#        self._update_attr()
+    #        super().__init__(coordinator)
+    #        self._update_attr()
 
     @property
     def name(self):
@@ -188,7 +204,11 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         try:
             self._attr_native_value = self.coordinator.data[self.entity_description.key]
             self._attr_available = self._attr_native_value is not None
-            _LOGGER.debug("Update sensor %s with value %s", self.entity_description.key, self._attr_native_value)
+            _LOGGER.debug(
+                "Update sensor %s with value %s",
+                self.entity_description.key,
+                self._attr_native_value,
+            )
             return self._attr_native_value
         except KeyError:
             self._attr_native_value = None
@@ -200,10 +220,14 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             pass
         try:
             # trying alternative search
-            stats_dict  = self.coordinator.data["statistics"]
+            stats_dict = self.coordinator.data["statistics"]
             self._attr_native_value = stats_dict[self.entity_description.key]
             self._attr_available = self._attr_native_value is not None
-            _LOGGER.debug("Update sensor %s with value %s", self.entity_description.key, self._attr_native_value)
+            _LOGGER.debug(
+                "Update sensor %s with value %s",
+                self.entity_description.key,
+                self._attr_native_value,
+            )
             return self._attr_native_value
         except KeyError:
             self._attr_native_value = None
@@ -218,7 +242,9 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         """Return if the sensor is available."""
         if self.coordinator._last_successful_update is None:
             return False
-        return datetime.now() - self.coordinator._last_successful_update < timedelta(hours=1)
+        return datetime.now() - self.coordinator._last_successful_update < timedelta(
+            hours=1
+        )
 
     @property
     def unit_of_measurement(self):
@@ -264,7 +290,11 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         try:
             self._attr_native_value = self.coordinator.data[self.entity_description.key]
             self._attr_available = self._attr_native_value is not None
-            _LOGGER.debug("Update sensor %s with value %s", self.entity_description.key, self._attr_native_value)
+            _LOGGER.debug(
+                "Update sensor %s with value %s",
+                self.entity_description.key,
+                self._attr_native_value,
+            )
             return self._attr_native_value
         except KeyError:
             self._attr_native_value = None
@@ -276,11 +306,18 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             pass
         try:
             # trying alternative search
-            stats_dict  = self.coordinator.data["statistics"]
-            _LOGGER.debug("Attempting deep search in array for key - data in struct - " + str(type(stats_dict)))
+            stats_dict = self.coordinator.data["statistics"]
+            _LOGGER.debug(
+                "Attempting deep search in array for key - data in struct - "
+                + str(type(stats_dict))
+            )
             self._attr_native_value = stats_dict[self.entity_description.key]
             self._attr_available = self._attr_native_value is not None
-            _LOGGER.debug("Update sensor %s with value %s", self.entity_description.key, self._attr_native_value)
+            _LOGGER.debug(
+                "Update sensor %s with value %s",
+                self.entity_description.key,
+                self._attr_native_value,
+            )
             return self._attr_native_value
         except KeyError:
             self._attr_native_value = None
@@ -297,6 +334,8 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             "manufacturer": MANUFACTURER,
             "model": self.coordinator.model,
         }
+
+
 #    async def async_update(self):
 #        """Update attributes for sensor."""
 #        self._attr_native_value = None

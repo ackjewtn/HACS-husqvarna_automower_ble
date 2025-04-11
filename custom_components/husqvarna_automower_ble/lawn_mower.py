@@ -26,6 +26,7 @@ FEATURES = (
     | LawnMowerEntityFeature.DOCK
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -46,6 +47,7 @@ async def async_setup_entry(
             ),
         ]
     )
+
 
 class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
     """Husqvarna Automower."""

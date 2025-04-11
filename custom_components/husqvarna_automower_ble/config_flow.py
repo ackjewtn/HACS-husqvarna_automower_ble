@@ -12,11 +12,12 @@ import voluptuous as vol
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth import BluetoothServiceInfo
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-#from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID
+
+# from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID
 from homeassistant.data_entry_flow import AbortFlow
 from bleak import BleakError
 
-from .const import DOMAIN,CONF_ADDRESS,CONF_PIN,CONF_CLIENT_ID
+from .const import DOMAIN, CONF_ADDRESS, CONF_PIN, CONF_CLIENT_ID
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,13 +85,19 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return self.async_create_entry(
                 title=title,
-                data={CONF_ADDRESS: self.address, CONF_CLIENT_ID: channel_id, CONF_PIN: self.pin},
+                data={
+                    CONF_ADDRESS: self.address,
+                    CONF_CLIENT_ID: channel_id,
+                    CONF_PIN: self.pin,
+                },
             )
 
         self._set_confirm_only()
         return self.async_show_form(
             step_id="confirm",
-            description_placeholders={"description": "Power your mower on and enter the PIN so it is in pairing mode and click SUBMIT."},
+            description_placeholders={
+                "description": "Power your mower on and enter the PIN so it is in pairing mode and click SUBMIT."
+            },
         )
 
     async def async_step_user(
@@ -98,8 +105,8 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the initial step."""
         _LOGGER.debug("async_step_user")
-        if not hasattr(self, 'address'):
-            self.address=""
+        if not hasattr(self, "address"):
+            self.address = ""
 
         errors = {}
         if user_input is not None:
@@ -117,5 +124,5 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_PIN, default=0): int,
                 },
             ),
-            errors=errors
+            errors=errors,
         )
