@@ -1,4 +1,4 @@
-"""Demo platform that has a couple fake lawn mowers."""
+"""Husqvarna Automower BLE lawn mower entity."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, MANUFACTURER
+from .const import DOMAIN
 from .coordinator import HusqvarnaAutomowerBleEntity, HusqvarnaCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,10 +64,10 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_supported_features = features
-        self._attr_activity = LawnMowerActivity.ERROR
+        self._attr_activity = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.serial)},
-            manufacturer=MANUFACTURER,
+            manufacturer=coordinator.manufacturer,
             model=coordinator.model,
         )
 
@@ -119,9 +119,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Start mowing."""
         _LOGGER.debug("Starting mower")
 
-        if not self.coordinator.mower.is_connected():
-            if not await self._connect_to_mower():
-                return
+        if not await self._ensure_connected():
+            return
 
         await self.coordinator.mower.mower_resume()
         if self._attr_activity == LawnMowerActivity.DOCKED:
@@ -135,9 +134,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Start docking."""
         _LOGGER.debug("Docking mower")
 
-        if not self.coordinator.mower.is_connected():
-            if not await self._connect_to_mower():
-                return
+        if not await self._ensure_connected():
+            return
 
         await self.coordinator.mower.mower_park()
         await self.coordinator.async_request_refresh()
@@ -149,9 +147,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Pause mower."""
         _LOGGER.debug("Pausing mower")
 
-        if not self.coordinator.mower.is_connected():
-            if not await self._connect_to_mower():
-                return
+        if not await self._ensure_connected():
+            return
 
         await self.coordinator.mower.mower_pause()
         await self.coordinator.async_request_refresh()
@@ -159,8 +156,11 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 
-    async def _connect_to_mower(self) -> bool:
-        """Attempt to connect to the mower."""
+    async def _ensure_connected(self) -> bool:
+        """Ensure the mower is connected."""
+        if self.coordinator.mower.is_connected():
+            return True
+
         _LOGGER.debug("Attempting to connect to mower")
         device = bluetooth.async_ble_device_from_address(
             self.coordinator.hass, self.coordinator.address, connectable=True

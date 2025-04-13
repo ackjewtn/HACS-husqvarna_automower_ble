@@ -10,8 +10,6 @@ from bleak_retry_connector import close_stale_connections_by_address, get_device
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
-
-# from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID, Platform
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -29,27 +27,21 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Husqvarna Autoconnect Bluetooth from a config entry."""
-    address = entry.data[CONF_ADDRESS]
-    pin = entry.data[CONF_PIN]
-    channel_id = entry.data[CONF_CLIENT_ID]
+    address: str = entry.data[CONF_ADDRESS]
+    pin: int = entry.data[CONF_PIN]
+    channel_id: int = entry.data[CONF_CLIENT_ID]
 
     LOGGER.info(STARTUP_MESSAGE)
 
     # Create the Mower instance
-    if pin != 0:
-        mower = Mower(channel_id, address, pin)
-    else:
-        mower = Mower(channel_id, address)
+    mower = Mower(channel_id, address, pin) if pin != 0 else Mower(channel_id, address)
 
     # Close stale BLE connections
     await close_stale_connections_by_address(address)
 
-    if pin != 0:
-        LOGGER.debug(
-            f"Connecting to {address} with channel ID {channel_id} and pin {pin}"
-        )
-    else:
-        LOGGER.debug(f"Connecting to {address} with channel ID {channel_id}")
+    LOGGER.debug(
+        f"Connecting to {address} with channel ID {channel_id} and pin {pin if pin != 0 else 'None'}"
+    )
     device = bluetooth.async_ble_device_from_address(
         hass, address, connectable=True
     ) or await get_device(address)
@@ -66,15 +58,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Retrieve mower details
     try:
+        manufacturer = await mower.get_manufacturer()
         model = await mower.get_model()
-        serial = await mower.command("GetSerialNumber")
+        serial = await mower.get_serial_number()
         LOGGER.info(f"Connected to Automower: {model} (Serial: {serial})")
     except Exception as ex:
         LOGGER.exception(f"Failed to retrieve mower details: {ex}")
         raise ConfigEntryNotReady("Failed to retrieve mower details") from ex
 
     # Set up the coordinator
-    coordinator = HusqvarnaCoordinator(hass, mower, address, model, channel_id, serial)
+    coordinator = HusqvarnaCoordinator(
+        hass, mower, address, manufacturer, model, channel_id, serial
+    )
     await coordinator.async_config_entry_first_refresh()
 
     # Store the coordinator and forward entry setups
@@ -86,6 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    LOGGER.debug(f"Unloading config entry: {entry.entry_id}")
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator: HusqvarnaCoordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
         if coordinator:

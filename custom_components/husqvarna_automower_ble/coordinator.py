@@ -33,6 +33,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hass: HomeAssistant,
         mower: Mower,
         address: str,
+        manufacturer: str,
         model: str,
         channel_id: str,
         serial: str,
@@ -45,12 +46,12 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=SCAN_INTERVAL,
         )
         self.address = address
+        self.manufacturer = manufacturer
         self.model = model
         self.mower = mower
         self.channel_id = channel_id
         self.serial = serial
         self._last_successful_update: datetime | None = None
-        self._last_data: dict[str, Any] | None = None
 
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and any connection."""
@@ -91,29 +92,25 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             # Fetch data from the mower
             data["battery_level"] = await self.mower.battery_level()
+            data["is_charging"] = await self.mower.is_charging()
             data["mode"] = await self.mower.mower_mode()
             data["state"] = await self.mower.mower_state()
             data["activity"] = await self.mower.mower_activity()
+            data["error"] = await self.mower.mower_error()
             data["next_start_time"] = await self.mower.mower_next_start_time()
-            data["RemainingChargingTime"] = await self.mower.command(
-                "GetRemainingChargingTime"
-            )
-            data["statistics"] = await self.mower.command("GetAllStatistics")
+
+            # Fetch mower statistics
+            stats = await self.mower.mower_statistics()
+            data.update(stats)
 
             self._last_successful_update = datetime.now()
-            self._last_data = data
 
             _LOGGER.debug("Successfully polled data: %s", data)
 
+            await self.mower.disconnect()
+
         except (TimeoutError, BleakError) as ex:
             _LOGGER.error("Error fetching data from device: %s", ex)
-            if self._last_data and self._last_successful_update:
-                if datetime.now() - self._last_successful_update < timedelta(hours=1):
-                    _LOGGER.warning(
-                        "Using cached data due to fetch failure within the last hour"
-                    )
-                    return self._last_data
-            await self._async_find_device()
             raise UpdateFailed("Error fetching data from device") from ex
 
         return data
@@ -131,4 +128,8 @@ class HusqvarnaAutomowerBleEntity(CoordinatorEntity[HusqvarnaCoordinator]):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return self.coordinator.mower.is_connected()
+        if self.coordinator._last_successful_update is None:
+            return False
+        return datetime.now() - self.coordinator._last_successful_update < timedelta(
+            minutes=10
+        )

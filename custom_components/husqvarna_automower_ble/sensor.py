@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 from automower_ble.protocol import ModeOfOperation, MowerState, MowerActivity
+from automower_ble.error_codes import ErrorCode
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -21,7 +22,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import format_mac
 
-from .const import DOMAIN, MANUFACTURER
+from .const import DOMAIN
 from .coordinator import HusqvarnaCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,19 +38,19 @@ MOWER_SENSORS = [
         icon="mdi:battery",
     ),
     SensorEntityDescription(
-        name="Next Start Time",
-        key="next_start_time",
+        name="Is Charging",
+        key="is_charging",
         unit_of_measurement=None,
-        device_class=None,
+        device_class=SensorDeviceClass.ENUM,
         state_class=None,
         entity_category=None,
-        icon="mdi:timer",
+        icon="mdi:power-plug",
     ),
     SensorEntityDescription(
         name="Mode",
         key="mode",
         unit_of_measurement=None,
-        device_class=None,
+        device_class=SensorDeviceClass.ENUM,
         state_class=None,
         entity_category=None,
         icon="mdi:robot",
@@ -58,7 +59,7 @@ MOWER_SENSORS = [
         name="State",
         key="state",
         unit_of_measurement=None,
-        device_class=None,
+        device_class=SensorDeviceClass.ENUM,
         state_class=None,
         entity_category=None,
         icon="mdi:state-machine",
@@ -67,10 +68,28 @@ MOWER_SENSORS = [
         name="Activity",
         key="activity",
         unit_of_measurement=None,
-        device_class=None,
+        device_class=SensorDeviceClass.ENUM,
         state_class=None,
         entity_category=None,
         icon="mdi:run",
+    ),
+    SensorEntityDescription(
+        name="Error",
+        key="error",
+        unit_of_measurement=None,
+        device_class=SensorDeviceClass.ENUM,
+        state_class=None,
+        entity_category=None,
+        icon="mdi:alert-circle",
+    ),
+    SensorEntityDescription(
+        name="Next Start Time",
+        key="next_start_time",
+        unit_of_measurement=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        state_class=None,
+        entity_category=None,
+        icon="mdi:timer",
     ),
     SensorEntityDescription(
         name="Total running time",
@@ -91,13 +110,49 @@ MOWER_SENSORS = [
         icon="mdi:timer",
     ),
     SensorEntityDescription(
-        name="Remaining Charge Time",
-        key="RemainingChargingTime",
+        name="Total charging time",
+        key="totalChargingTime",
         unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:power-plug-battery",
+        icon="mdi:timer",
+    ),
+    SensorEntityDescription(
+        name="Total searching time",
+        key="totalSearchingTime",
+        unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:timer",
+    ),
+    SensorEntityDescription(
+        name="Total number of collisions",
+        key="numberOfCollisions",
+        unit_of_measurement=None,
+        device_class=None,
+        state_class=SensorStateClass.TOTAL,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:alert-circle",
+    ),
+    SensorEntityDescription(
+        name="Total number of charging cycles",
+        key="numberOfChargingCycles",
+        unit_of_measurement=None,
+        device_class=None,
+        state_class=SensorStateClass.TOTAL,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:repeat-variant",
+    ),
+    SensorEntityDescription(
+        name="Total cutting blade usage",
+        key="cuttingBladeUsageTime",
+        unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:blade",
     ),
 ]
 
@@ -135,8 +190,16 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         """Initialize the Automower sensor entity."""
         super().__init__(coordinator)
         self.entity_description = description
+
         self._attr_unique_id = f"{mower_id}_{description.key}"
-        self._attributes = {"description": description.name, "last_updated": None}
+        self._name = description.name
+        self._key = description.key
+        self._unit_of_measurement = description.unit_of_measurement
+        self._device_class = description.device_class
+        self._state = None
+        self._state_class = description.state_class
+        self._entity_category = description.entity_category
+        self._description = description.name
 
         _LOGGER.debug(
             "Creating sensor entity: %s with unique_id: %s",
@@ -145,16 +208,31 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self.entity_description.name
+
+    @property
     def state(self):
         """Return the state of the sensor."""
-        value = self._update_attr()
-        if self.entity_description.key == "mode":
-            return ModeOfOperation(value).name if value is not None else None
-        if self.entity_description.key == "state":
-            return MowerState(value).name if value is not None else None
-        if self.entity_description.key == "activity":
-            return MowerActivity(value).name if value is not None else None
-        return value
+        _LOGGER.debug("in state sensor code")
+        self._attr_native_value = None
+        try:
+            self._attr_native_value = self.coordinator.data[self.entity_description.key]
+            self._attr_available = self._attr_native_value is not None
+            _LOGGER.debug(
+                "Update sensor %s with value %s",
+                self.entity_description.key,
+                self._attr_native_value,
+            )
+            return self._attr_native_value
+        except KeyError:
+            self._attr_native_value = None
+            _LOGGER.error(
+                "%s not a valid attribute (in state)",
+                self.entity_description.key,
+            )
+        return None
 
     @property
     def available(self) -> bool:
@@ -162,12 +240,37 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         last_update = self.coordinator._last_successful_update
         if last_update is None:
             return False
-        return datetime.now() - last_update < timedelta(hours=1)
+        return datetime.now() - last_update < timedelta(minutes=10)
 
     @property
-    def extra_state_attributes(self) -> dict:
+    def unit_of_measurement(self):
+        """Return the unit of measurement of this sensor."""
+        return self.entity_description.unit_of_measurement
+
+    @property
+    def device_class(self):
+        """Return the device class of this sensor."""
+        return self.entity_description.device_class
+
+    @property
+    def state_class(self):
+        """Return the state class of this sensor."""
+        return self.entity_description.state_class
+
+    @property
+    def extra_state_attributes(self):
         """Return the state attributes."""
         return self._attributes
+
+    @property
+    def entity_category(self):
+        """Return the entity category of this sensor."""
+        return self.entity_description.entity_category
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return self.entity_description.icon
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -175,54 +278,33 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         self._update_attr()
         super()._handle_coordinator_update()
 
+    @callback
     def _update_attr(self) -> None:
-        """Update attributes for the sensor."""
+        """Update attributes for sensor."""
+        _LOGGER.debug("in _update_attr code")
+        self._attr_native_value = None
         try:
             self._attr_native_value = self.coordinator.data[self.entity_description.key]
             self._attr_available = self._attr_native_value is not None
             _LOGGER.debug(
-                "Updated sensor %s with value %s",
+                "Update sensor %s with value %s",
                 self.entity_description.key,
                 self._attr_native_value,
             )
+            return self._attr_native_value
         except KeyError:
-            _LOGGER.warning(
-                "Key %s not found in coordinator data. Attempting deep search.",
+            self._attr_native_value = None
+            _LOGGER.error(
+                "%s not a valid attribute (in _update_attr)",
                 self.entity_description.key,
             )
-            self._deep_search()
-
-        return self._attr_native_value
-
-    def _deep_search(self) -> None:
-        """Perform a deep search for the attribute in nested data."""
-        try:
-            stats_dict = self.coordinator.data.get("statistics", {})
-            self._attr_native_value = stats_dict.get(self.entity_description.key)
-            self._attr_available = self._attr_native_value is not None
-            if self._attr_native_value is not None:
-                _LOGGER.debug(
-                    "Deep search successful for key %s with value %s",
-                    self.entity_description.key,
-                    self._attr_native_value,
-                )
-            else:
-                _LOGGER.error(
-                    "Deep search failed for key %s. Value not found.",
-                    self.entity_description.key,
-                )
-        except Exception as ex:
-            _LOGGER.exception(
-                "Unexpected error during deep search for key %s: %s",
-                self.entity_description.key,
-                ex,
-            )
+        return None
 
     @property
     def device_info(self) -> dict:
         """Return device information about this entity."""
         return {
             "identifiers": {(DOMAIN, self.coordinator.serial)},
-            "manufacturer": MANUFACTURER,
+            "manufacturer": self.coordinator.manufacturer,
             "model": self.coordinator.model,
         }

@@ -2,26 +2,24 @@
   "config": {
     "step": {
       "user": {
-        "title": "Automower BLE configuration",
-        "description": "Configure your mower before powering it on.",
+        "title": "Automower BLE Configuration",
+        "description": "Enter the Bluetooth MAC address and PIN code of your mower.",
         "data": {
           "address": "The Bluetooth MAC address of your mower",
           "pin": "(optional) PIN code"
         }
-      },
-      "confirm": {
-        "title": "Automower BLE configuration - confirm",
-        "description": "Do you want to set up {name}? Make sure the mower is in pairing mode"
       }
     },
     "error": {
-      "invalid_mac": "Invalid MAC address entered",
+      "invalid_address": "Invalid Bluetooth MAC address entered",
+      "invalid_pin": "Invalid PIN code entered",
       "already_configured": "Device is already configured",
-      "exception": "Error with BLE component",
-      "cannot_connect": "Cannot connect via BLE to your MAC address, check and try again"
+      "cannot_connect": "Cannot connect to the mower via Bluetooth. Check the address and try again.",
+      "exception": "An unexpected error occurred with the BLE component"
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "This device is already configured",
+      "no_devices_found": "No supported devices found"
     }
   }
 }
