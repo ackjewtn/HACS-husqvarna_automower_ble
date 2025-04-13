@@ -131,5 +131,5 @@ class HusqvarnaAutomowerBleEntity(CoordinatorEntity[HusqvarnaCoordinator]):
         if self.coordinator._last_successful_update is None:
             return False
         return datetime.now() - self.coordinator._last_successful_update < timedelta(
-            minutes=10
+            minutes=12
         )
