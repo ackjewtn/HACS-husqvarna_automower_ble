@@ -1,3 +1,3 @@
-git+https://github.com/Marbanz/AutoMower-BLE.git
+git+https://github.com/Marbanz/AutoMower-BLE.git@main
 homeassistant>=2025.1.0
 ruff
