@@ -41,7 +41,7 @@ MOWER_SENSORS = [
         name="Is Charging",
         key="is_charging",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.ENUM,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:power-plug",
@@ -50,7 +50,7 @@ MOWER_SENSORS = [
         name="Mode",
         key="mode",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.ENUM,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:robot",
@@ -59,7 +59,7 @@ MOWER_SENSORS = [
         name="State",
         key="state",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.ENUM,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:state-machine",
@@ -68,7 +68,7 @@ MOWER_SENSORS = [
         name="Activity",
         key="activity",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.ENUM,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:run",
@@ -77,7 +77,7 @@ MOWER_SENSORS = [
         name="Error",
         key="error",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.ENUM,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:alert-circle",
@@ -86,7 +86,7 @@ MOWER_SENSORS = [
         name="Next Start Time",
         key="next_start_time",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.TIMESTAMP,
+        device_class=None,
         state_class=None,
         entity_category=None,
         icon="mdi:timer",
@@ -191,6 +191,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{mower_id}_{description.key}"
+        self._attributes = {}
 
         _LOGGER.debug(
             "Creating sensor entity: %s with unique_id: %s",
@@ -208,6 +209,16 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         """Return the state of the sensor."""
         try:
             value = self.coordinator.data[self.entity_description.key]
+            if self.entity_description.key == "mode":
+                value = ModeOfOperation(value).name
+            elif self.entity_description.key == "state":
+                value = MowerState(value).name
+            elif self.entity_description.key == "activity":
+                value = MowerActivity(value).name
+            elif self.entity_description.key == "error":
+                value = ErrorCodes(value).name
+            elif self.entity_description.key == "next_start_time":
+                value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
             _LOGGER.debug(
                 "Update sensor %s with value %s",
                 self.entity_description.key,
