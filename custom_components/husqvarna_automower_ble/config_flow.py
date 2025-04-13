@@ -6,7 +6,7 @@ import logging
 import random
 from typing import Any
 
-from automower_ble.mower import Mower
+from husqvarna_automower_ble.mower import Mower
 from bleak import BleakError
 import voluptuous as vol
 

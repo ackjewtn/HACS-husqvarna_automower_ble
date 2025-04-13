@@ -6,7 +6,7 @@ from datetime import timedelta, datetime
 import logging
 from typing import Any
 
-from automower_ble.mower import Mower
+from husqvarna_automower_ble.mower import Mower
 from bleak import BleakError
 from bleak_retry_connector import close_stale_connections_by_address
 

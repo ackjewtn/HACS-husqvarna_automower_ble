@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from automower_ble.mower import Mower
+from husqvarna_automower_ble.mower import Mower
 from bleak import BleakError
 from bleak_retry_connector import close_stale_connections_by_address, get_device
 

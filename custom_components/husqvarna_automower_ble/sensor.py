@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from automower_ble.protocol import ModeOfOperation, MowerState, MowerActivity
-from automower_ble.error_codes import ErrorCode
+from husqvarna_automower_ble.protocol import ModeOfOperation, MowerState, MowerActivity
+from husqvarna_automower_ble.error_codes import ErrorCode
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
