@@ -199,6 +199,11 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self.entity_description.name
+
+    @property
     def state(self):
         """Return the state of the sensor."""
         try:
@@ -216,18 +221,48 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             )
             return None
 
-    #    @property
-    #    def available(self) -> bool:
-    #        """Return if the sensor is available."""
-    #        last_update = self.coordinator._last_successful_update
-    #        if last_update is None:
-    #            return False
-    #        return datetime.now() - last_update < timedelta(minutes=10)
+    @property
+    def available(self) -> bool:
+        """Return if the sensor is available."""
+        last_update = self.coordinator._last_successful_update
+        if last_update is None:
+            return False
+        return datetime.now() - last_update < timedelta(minutes=12)
+    
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement of this sensor."""
+        return self.entity_description.unit_of_measurement
+
+    @property
+    def device_class(self):
+        """Return the device class of this sensor."""
+        return self.entity_description.device_class
+
+    @property
+    def state_class(self):
+        """Return the state class of this sensor."""
+        return self.entity_description.state_class
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        return self._attributes
+
+    @property
+    def entity_category(self):
+        """Return the entity category of this sensor."""
+        return self.entity_description.entity_category
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return self.entity_description.icon
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle coordinator update."""
-        self.async_write_ha_state()
+        super()._handle_coordinator_update()
 
     @property
     def device_info(self) -> dict:
