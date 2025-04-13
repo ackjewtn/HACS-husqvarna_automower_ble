@@ -200,6 +200,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         self._state_class = description.state_class
         self._entity_category = description.entity_category
         self._description = description.name
+        self._attributes = {"description": description.name, "last_updated": None}
 
         _LOGGER.debug(
             "Creating sensor entity: %s with unique_id: %s",
