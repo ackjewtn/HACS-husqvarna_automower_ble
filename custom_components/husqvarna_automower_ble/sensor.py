@@ -218,7 +218,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             elif self.entity_description.key == "error":
                 value = ErrorCodes(value).name
             elif self.entity_description.key == "next_start_time" and value is not None:
-                value = value.replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+                value = value.strftime("%Y-%m-%d %H:%M:%S")
 
             _LOGGER.debug(
                 "Update sensor %s with value %s",
