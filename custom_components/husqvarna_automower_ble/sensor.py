@@ -86,7 +86,7 @@ MOWER_SENSORS = [
         name="Next Start Time",
         key="next_start_time",
         unit_of_measurement=None,
-        device_class=None,
+        device_class=SensorDeviceClass.TIMESTAMP,
         state_class=None,
         entity_category=None,
         icon="mdi:timer",
@@ -218,7 +218,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             elif self.entity_description.key == "error":
                 value = ErrorCodes(value).name
             elif self.entity_description.key == "next_start_time":
-                value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+                value = datetime.fromtimestamp(value).replace(tzinfo=None)
             _LOGGER.debug(
                 "Update sensor %s with value %s",
                 self.entity_description.key,
