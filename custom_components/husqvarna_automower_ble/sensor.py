@@ -86,7 +86,7 @@ MOWER_SENSORS = [
         name="Next Start Time",
         key="next_start_time",
         unit_of_measurement=None,
-        device_class=SensorDeviceClass.TIMESTAMP,
+        device_class=SensorDeviceClass.DATE,
         state_class=None,
         entity_category=None,
         icon="mdi:timer",
@@ -218,7 +218,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             elif self.entity_description.key == "error":
                 value = ErrorCodes(value).name
             elif self.entity_description.key == "next_start_time":
-                value = datetime.fromtimestamp(value).replace(tzinfo=None)
+                value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
             _LOGGER.debug(
                 "Update sensor %s with value %s",
                 self.entity_description.key,
@@ -239,7 +239,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         if last_update is None:
             return False
         return datetime.now() - last_update < timedelta(minutes=12)
-    
+
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement of this sensor."""
