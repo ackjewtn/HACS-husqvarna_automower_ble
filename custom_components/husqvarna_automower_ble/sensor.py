@@ -152,7 +152,7 @@ MOWER_SENSORS = [
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:blade",
+        icon="mdi:fan",
     ),
 ]
 
@@ -190,17 +190,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         """Initialize the Automower sensor entity."""
         super().__init__(coordinator)
         self.entity_description = description
-
         self._attr_unique_id = f"{mower_id}_{description.key}"
-        self._name = description.name
-        self._key = description.key
-        self._unit_of_measurement = description.unit_of_measurement
-        self._device_class = description.device_class
-        self._state = None
-        self._state_class = description.state_class
-        self._entity_category = description.entity_category
-        self._description = description.name
-        self._attributes = {"description": description.name, "last_updated": None}
 
         _LOGGER.debug(
             "Creating sensor entity: %s with unique_id: %s",
@@ -209,97 +199,35 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         )
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self.entity_description.name
-
-    @property
     def state(self):
         """Return the state of the sensor."""
-        _LOGGER.debug("in state sensor code")
-        self._attr_native_value = None
         try:
-            self._attr_native_value = self.coordinator.data[self.entity_description.key]
-            self._attr_available = self._attr_native_value is not None
+            value = self.coordinator.data[self.entity_description.key]
             _LOGGER.debug(
                 "Update sensor %s with value %s",
                 self.entity_description.key,
-                self._attr_native_value,
+                value,
             )
-            return self._attr_native_value
+            return value
         except KeyError:
-            self._attr_native_value = None
             _LOGGER.error(
                 "%s not a valid attribute (in state)",
                 self.entity_description.key,
             )
-        return None
+            return None
 
-    @property
-    def available(self) -> bool:
-        """Return if the sensor is available."""
-        last_update = self.coordinator._last_successful_update
-        if last_update is None:
-            return False
-        return datetime.now() - last_update < timedelta(minutes=10)
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement of this sensor."""
-        return self.entity_description.unit_of_measurement
-
-    @property
-    def device_class(self):
-        """Return the device class of this sensor."""
-        return self.entity_description.device_class
-
-    @property
-    def state_class(self):
-        """Return the state class of this sensor."""
-        return self.entity_description.state_class
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        return self._attributes
-
-    @property
-    def entity_category(self):
-        """Return the entity category of this sensor."""
-        return self.entity_description.entity_category
-
-    @property
-    def icon(self):
-        """Return the icon of the sensor."""
-        return self.entity_description.icon
+    #    @property
+    #    def available(self) -> bool:
+    #        """Return if the sensor is available."""
+    #        last_update = self.coordinator._last_successful_update
+    #        if last_update is None:
+    #            return False
+    #        return datetime.now() - last_update < timedelta(minutes=10)
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle coordinator update."""
-        self._update_attr()
-        super()._handle_coordinator_update()
-
-    @callback
-    def _update_attr(self) -> None:
-        """Update attributes for sensor."""
-        _LOGGER.debug("in _update_attr code")
-        self._attr_native_value = None
-        try:
-            self._attr_native_value = self.coordinator.data[self.entity_description.key]
-            self._attr_available = self._attr_native_value is not None
-            _LOGGER.debug(
-                "Update sensor %s with value %s",
-                self.entity_description.key,
-                self._attr_native_value,
-            )
-            return self._attr_native_value
-        except KeyError:
-            self._attr_native_value = None
-            _LOGGER.error(
-                "%s not a valid attribute (in _update_attr)",
-                self.entity_description.key,
-            )
-        return None
+        self.async_write_ha_state()
 
     @property
     def device_info(self) -> dict:
