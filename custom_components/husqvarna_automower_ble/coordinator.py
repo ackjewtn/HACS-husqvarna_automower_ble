@@ -8,7 +8,6 @@ from typing import Any
 
 from husqvarna_automower_ble.mower import Mower
 from bleak import BleakError
-from bleak_retry_connector import close_stale_connections_by_address
 
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
@@ -63,7 +62,6 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_find_device(self) -> None:
         """Attempt to reconnect to the device."""
         _LOGGER.debug("Attempting to reconnect to the device")
-        await close_stale_connections_by_address(self.address)
 
         device = bluetooth.async_ble_device_from_address(
             self.hass, self.address, connectable=True
