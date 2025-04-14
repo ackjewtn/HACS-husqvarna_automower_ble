@@ -14,7 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers import config_validation as entity_platform
+from homeassistant.helpers import config_validation as cv, entity_platform
 
 from .const import DOMAIN
 from .coordinator import HusqvarnaAutomowerBleEntity, HusqvarnaCoordinator
