@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import config_validation as entity_platform
 
 from .const import DOMAIN
 from .coordinator import HusqvarnaAutomowerBleEntity, HusqvarnaCoordinator
@@ -37,8 +38,6 @@ async def async_setup_entry(
     model = coordinator.model
     address = coordinator.address
 
-    await coordinator.async_config_entry_first_refresh()
-
     async_add_entities(
         [
             AutomowerLawnMower(
@@ -48,6 +47,18 @@ async def async_setup_entry(
                 FEATURES,
             ),
         ]
+    )
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        "park_indefinitely",
+        {},
+        "async_park_indefinitely",
+    )
+    platform.async_register_entity_service(
+        "resume_schedule",
+        {},
+        "async_resume_schedule",
     )
 
 
@@ -72,6 +83,11 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             manufacturer=coordinator.manufacturer,
             model=coordinator.model,
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Handle when the entity is added to Home Assistant."""
+        _LOGGER.debug("AutomowerLawnMower entity added to Home Assistant")
+        self._update_attr()
 
     def _get_activity(self) -> LawnMowerActivity | None:
         """Return the current lawn mower activity."""
@@ -153,6 +169,32 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_pause()
+        await self.coordinator.async_request_refresh()
+
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
+
+    async def async_park_indefinitely(self) -> None:
+        """Park mower indefinitely."""
+        _LOGGER.debug("Parking mower indefinitely")
+
+        if not await self._ensure_connected():
+            return
+
+        await self.coordinator.mower.mower_park_indefinitely()
+        await self.coordinator.async_request_refresh()
+
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
+
+    async def async_resume_schedule(self) -> None:
+        """Resume mower schedule."""
+        _LOGGER.debug("Resuming mower schedule")
+
+        if not await self._ensure_connected():
+            return
+
+        await self.coordinator.mower.mower_auto()
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()

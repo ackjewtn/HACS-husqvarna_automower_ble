@@ -1,0 +1,13 @@
+park_indefinitely:
+  description: "Park the automower indefinitely."
+  target:
+    entity:
+      integration: "husqvarna_automower_ble"
+      domain: "lawn_mower"
+
+resume_schedule:
+  description: "Resume the automower's schedule."
+  target:
+    entity:
+      integration: "husqvarna_automower_ble"
+      domain: "lawn_mower"
