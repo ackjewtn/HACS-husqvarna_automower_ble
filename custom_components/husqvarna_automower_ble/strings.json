@@ -21,5 +21,15 @@
       "already_configured": "This device is already configured",
       "no_devices_found": "No supported devices found"
     }
+  },
+  "services": {
+    "park_indefinitely": {
+      "name": "Park Indefinitely",
+      "description": "Parks the mower indefinitely."
+    },
+    "resume_schedule": {
+      "name": "Resume Schedule",
+      "description": "Resumes the mower's schedule."
+    }
   }
 }
