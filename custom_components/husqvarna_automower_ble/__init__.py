@@ -70,11 +70,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = HusqvarnaCoordinator(
         hass, mower, address, manufacturer, model, channel_id, serial
     )
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as ex:
-        LOGGER.exception("Failed to perform the first data refresh: %s", ex)
-        raise ConfigEntryNotReady("Initial data fetch failed") from ex
+
+    await coordinator.async_config_entry_first_refresh()
 
     # Store the coordinator and forward entry setups
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
