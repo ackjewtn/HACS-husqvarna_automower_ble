@@ -2,7 +2,9 @@
 
 # HACS-husqvarna_automower_ble - Custom integration for Husqvarna Bluetooth automowers
 
-This Home Assistant integration allows you to control Husqvarna Bluetooth-enabled automowers (e.g., Easilife Go and other models using Husqvarna internal boards) via Bluetooth Low Energy (BLE). It is based on the BLE implementation available at [HusqvarnaAutoMower-BLE](https://github.com/Marbanz/HusqvarnaAutoMower-BLE).
+This Home Assistant integration allows you to control Husqvarna Bluetooth-enabled automowers (e.g., Easilife Go and other models using Husqvarna internal boards) via Bluetooth Low Energy (BLE).
+
+It is based on the BLE implementation available at [HusqvarnaAutoMower-BLE](https://github.com/Marbanz/HusqvarnaAutoMower-BLE).
 
 ---
 
@@ -88,8 +90,8 @@ The integration creates several sensors to monitor the mower's status and perfor
 - **Battery Level**: Displays the current battery percentage.
 - **Charging Status**: Indicates whether the mower is charging.
 - **Mode**: Shows the current operating mode of the mower.
-- **State**: Displays the mower's current state (e.g., mowing, paused, docked).
-- **Activity**: Indicates the mower's activity (e.g., mowing, returning to dock).
+- **State**: Displays the mower's current state.
+- **Activity**: Indicates the mower's activity.
 - **Error Code**: Provides error details if the mower encounters an issue.
 - **Next Start Time**: Displays the next scheduled mowing time.
 - **Statistics**: Tracks total runtime, cutting time, charging time, and more.
@@ -98,7 +100,7 @@ The integration creates several sensors to monitor the mower's status and perfor
 
 The integration provides additional custom services to enhance control over your mower:
 
-- **Park the mower indefinitely**: This service allows you to park the mower at its docking station without resuming its schedule until manually instructed.
+- **Park indefinitely**: This service allows you to park the mower at its docking station without resuming its schedule until manually instructed.
 - **Resume schedule**: Use this service to resume the mower's predefined schedule after it has been paused or parked.
 
 These services can be accessed via **Actions** in the Home Assistant UI or can be used in **automations** for advanced control.
