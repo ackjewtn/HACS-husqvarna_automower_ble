@@ -107,8 +107,9 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             await self.mower.disconnect()
 
-        except (TimeoutError, BleakError) as ex:
+        except Exception as ex:
             _LOGGER.error("Error fetching data from device: %s", ex)
+            self.async_update_listeners()
             raise UpdateFailed("Error fetching data from device") from ex
 
         return data

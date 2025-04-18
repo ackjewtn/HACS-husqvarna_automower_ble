@@ -131,7 +131,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
     def _update_attr(self) -> None:
         """Update mower attributes."""
         self._attr_activity = self._get_activity()
-        self._attr_available = self._attr_activity is not None
+        self._attr_available = self.available
 
     async def async_start_mowing(self) -> None:
         """Start mowing."""
@@ -145,8 +145,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             await self.coordinator.mower.mower_override()
         await self.coordinator.async_request_refresh()
 
-        self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def async_dock(self) -> None:
         """Start docking."""
@@ -158,8 +157,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_park()
         await self.coordinator.async_request_refresh()
 
-        self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def async_pause(self) -> None:
         """Pause mower."""
@@ -171,8 +169,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_pause()
         await self.coordinator.async_request_refresh()
 
-        self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def async_park_indefinitely(self) -> None:
         """Park mower indefinitely."""
@@ -184,8 +181,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_park_indefinitely()
         await self.coordinator.async_request_refresh()
 
-        self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def async_resume_schedule(self) -> None:
         """Resume mower schedule."""
@@ -197,8 +193,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_auto()
         await self.coordinator.async_request_refresh()
 
-        self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def _ensure_connected(self) -> bool:
         """Ensure the mower is connected."""
