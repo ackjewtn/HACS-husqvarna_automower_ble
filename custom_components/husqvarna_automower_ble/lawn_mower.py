@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+from husqvarna_automower_ble.protocol import MowerActivity, MowerState
+
 from homeassistant.components import bluetooth
 from homeassistant.components.lawn_mower import (
     LawnMowerActivity,
@@ -17,7 +19,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import config_validation as cv, entity_platform
 
 from .const import DOMAIN
-from .coordinator import HusqvarnaAutomowerBleEntity, HusqvarnaCoordinator
+from .coordinator import HusqvarnaCoordinator
+from .entity import HusqvarnaAutomowerBleEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,11 +87,6 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             model=coordinator.model,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Handle when the entity is added to Home Assistant."""
-        _LOGGER.debug("AutomowerLawnMower entity added to Home Assistant")
-        self._update_attr()
-
     def _get_activity(self) -> LawnMowerActivity | None:
         """Return the current lawn mower activity."""
         if not self.coordinator.data:
@@ -103,35 +101,42 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         if state is None or activity is None:
             return None
 
-        match str(state):
-            case "5":
-                return LawnMowerActivity.PAUSED
-            case "2" | "0" | "1":
-                return LawnMowerActivity.ERROR
-            case "7" | "6" | "4":
-                match str(activity):
-                    case "1" | "5":
-                        return LawnMowerActivity.DOCKED
-                    case "2" | "3":
-                        return LawnMowerActivity.MOWING
-                    case "4":
-                        return LawnMowerActivity.RETURNING
-                    case "6":
-                        return LawnMowerActivity.ERROR
+        if state == MowerState.PAUSED:
+            return LawnMowerActivity.PAUSED
+        if state in (MowerState.STOPPED, MowerState.OFF, MowerState.WAIT_FOR_SAFETYPIN):
+            # This is actually stopped, but that isn't an option
+            return LawnMowerActivity.ERROR
+        if state in (
+            MowerState.RESTRICTED,
+            MowerState.IN_OPERATION,
+            MowerState.PENDING_START,
+        ):
+            if activity in (
+                MowerActivity.CHARGING,
+                MowerActivity.PARKED,
+                MowerActivity.NONE,
+            ):
+                return LawnMowerActivity.DOCKED
+            if activity in (MowerActivity.GOING_OUT, MowerActivity.MOWING):
+                return LawnMowerActivity.MOWING
+            if activity == MowerActivity.GOING_HOME:
+                return LawnMowerActivity.RETURNING
         return LawnMowerActivity.ERROR
+
+    async def async_added_to_hass(self) -> None:
+        """Handle when the entity is added to Home Assistant."""
+        _LOGGER.debug("AutomowerLawnMower entity added to Home Assistant")
+        self._attr_activity = self._get_activity()
+        self._attr_available = self._attr_activity is not None and self.available
+        await super().async_added_to_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug("Handling coordinator update for AutomowerLawnMower")
-        self._update_attr()
-        super()._handle_coordinator_update()
-
-    @callback
-    def _update_attr(self) -> None:
-        """Update mower attributes."""
         self._attr_activity = self._get_activity()
-        self._attr_available = self.available
+        self._attr_available = self._attr_activity is not None and self.available
+        super()._handle_coordinator_update()
 
     async def async_start_mowing(self) -> None:
         """Start mowing."""
@@ -145,7 +150,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             await self.coordinator.mower.mower_override()
         await self.coordinator.async_request_refresh()
 
-        self._handle_coordinator_update()
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
 
     async def async_dock(self) -> None:
         """Start docking."""
@@ -157,7 +163,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_park()
         await self.coordinator.async_request_refresh()
 
-        self._handle_coordinator_update()
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
 
     async def async_pause(self) -> None:
         """Pause mower."""
@@ -169,7 +176,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_pause()
         await self.coordinator.async_request_refresh()
 
-        self._handle_coordinator_update()
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
 
     async def async_park_indefinitely(self) -> None:
         """Park mower indefinitely."""
@@ -181,7 +189,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_park_indefinitely()
         await self.coordinator.async_request_refresh()
 
-        self._handle_coordinator_update()
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
 
     async def async_resume_schedule(self) -> None:
         """Resume mower schedule."""
@@ -193,7 +202,8 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_auto()
         await self.coordinator.async_request_refresh()
 
-        self._handle_coordinator_update()
+        self._attr_activity = self._get_activity()
+        self.async_write_ha_state()
 
     async def _ensure_connected(self) -> bool:
         """Ensure the mower is connected."""

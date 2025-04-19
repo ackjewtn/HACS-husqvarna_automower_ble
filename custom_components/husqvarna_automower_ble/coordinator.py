@@ -12,7 +12,6 @@ from bleak import BleakError
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
 )
@@ -105,30 +104,15 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             _LOGGER.debug("Successfully polled data: %s", data)
 
-            await self.mower.disconnect()
-
-        except Exception as ex:
+        except (TimeoutError, BleakError) as ex:
             _LOGGER.error("Error fetching data from device: %s", ex)
-            self.async_update_listeners()
             raise UpdateFailed("Error fetching data from device") from ex
+        except Exception as ex:
+            _LOGGER.exception("Unexpected error while fetching data: %s", ex)
+            raise UpdateFailed("Unexpected error fetching data") from ex
+        finally:
+            # Ensure the mower is disconnected after polling
+            if self.mower.is_connected():
+                await self.mower.disconnect()
 
         return data
-
-
-class HusqvarnaAutomowerBleEntity(CoordinatorEntity[HusqvarnaCoordinator]):
-    """Coordinator entity for Husqvarna Automower Bluetooth."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: HusqvarnaCoordinator, context: Any = None) -> None:
-        """Initialize coordinator entity."""
-        super().__init__(coordinator, context)
-
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if self.coordinator._last_successful_update is None:
-            return False
-        return datetime.now() - self.coordinator._last_successful_update < timedelta(
-            minutes=12
-        )

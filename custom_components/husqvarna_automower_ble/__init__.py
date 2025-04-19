@@ -42,11 +42,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug(
         f"Connecting to {address} with channel ID {channel_id} and pin {pin if pin != 0 else 'None'}"
     )
-    device = bluetooth.async_ble_device_from_address(
-        hass, address, connectable=True
-    ) or await get_device(address)
 
     try:
+        # Attempt to find and connect to the device
+        device = bluetooth.async_ble_device_from_address(
+            hass, address, connectable=True
+        ) or await get_device(address)
         if not await mower.connect(device):
             LOGGER.error(f"Failed to connect to device at {address}")
             raise ConfigEntryNotReady("Couldn't find device")
@@ -71,7 +72,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass, mower, address, manufacturer, model, channel_id, serial
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as ex:
+        LOGGER.exception(f"Failed to refresh coordinator data: {ex}")
+        raise ConfigEntryNotReady("Failed to refresh coordinator data") from ex
 
     # Store the coordinator and forward entry setups
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator

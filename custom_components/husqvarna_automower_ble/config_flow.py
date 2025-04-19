@@ -82,14 +82,16 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                 channel_id = random.randint(1, 0xFFFFFFFF)
 
                 try:
-                    manufacture, device_type, model = await Mower(
-                        channel_id, self.address
-                    ).probe_gatts(device)
+                    mower = Mower(channel_id, self.address, self.pin)
+                    manufacture, device_type, model = await mower.probe_gatts(device)
                 except (BleakError, TimeoutError) as exception:
                     _LOGGER.error(
                         "Failed to connect to device at %s: %s", self.address, exception
                     )
                     errors["base"] = "cannot_connect"
+                except Exception as ex:
+                    _LOGGER.exception("Unexpected error: %s", ex)
+                    errors["base"] = "exception"
                 else:
                     # Create the configuration entry
                     title = f"{manufacture} {device_type.replace(chr(0), '')}"
