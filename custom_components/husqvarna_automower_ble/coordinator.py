@@ -106,9 +106,11 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         except (TimeoutError, BleakError) as ex:
             _LOGGER.error("Error fetching data from device: %s", ex)
+            self.async_update_listeners()
             raise UpdateFailed("Error fetching data from device") from ex
         except Exception as ex:
             _LOGGER.exception("Unexpected error while fetching data: %s", ex)
+            self.async_update_listeners()
             raise UpdateFailed("Unexpected error fetching data") from ex
         finally:
             # Ensure the mower is disconnected after polling
