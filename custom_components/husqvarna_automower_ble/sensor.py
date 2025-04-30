@@ -91,6 +91,9 @@ MOWER_SENSORS = [
         entity_category=None,
         icon="mdi:timer",
     ),
+]
+
+MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total running time",
         key="totalRunningTime",
@@ -171,6 +174,13 @@ async def async_setup_entry(
         )
         for description in MOWER_SENSORS
     ]
+    if coordinator.data.get("statistics") is not None:
+        sensors += [
+            AutomowerSensorEntity(
+                coordinator, description, "automower_" + format_mac(coordinator.address)
+            )
+            for description in MOWER_STATISTICS_SENSORS
+        ]
     if not sensors:
         _LOGGER.error("No sensors were created. Check MOWER_SENSORS.")
     async_add_entities(sensors)
@@ -208,28 +218,55 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
     def state(self):
         """Return the state of the sensor."""
         try:
-            value = self.coordinator.data[self.entity_description.key]
-            if self.entity_description.key == "mode":
-                value = ModeOfOperation(value).name
-            elif self.entity_description.key == "state":
-                value = MowerState(value).name
-            elif self.entity_description.key == "activity":
-                value = MowerActivity(value).name
-            elif self.entity_description.key == "error":
-                value = ErrorCodes(value).name
-            elif self.entity_description.key == "next_start_time" and value is not None:
-                value = value.replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+            key = self.entity_description.key
+            # Check if this sensor is a statistics sensor
+            is_statistic_sensor = any(
+                desc.key == key for desc in MOWER_STATISTICS_SENSORS
+            )
+
+            if is_statistic_sensor:
+                # Access value from the nested 'statistics' dictionary
+                stats_data = self.coordinator.data.get("statistics", {})
+                value = stats_data[key]
+            else:
+                value = self.coordinator.data[key]
+                if key == "mode":
+                    value = ModeOfOperation(value).name
+                elif key == "state":
+                    value = MowerState(value).name
+                elif key == "activity":
+                    value = MowerActivity(value).name
+                elif key == "error":
+                    value = ErrorCodes(value).name
+                elif key == "next_start_time" and value is not None:
+                    # Ensure value is a datetime object before formatting
+                    if isinstance(value, datetime):
+                        value = value.replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        _LOGGER.warning(
+                            "Expected datetime for next_start_time, got %s", type(value)
+                        )
+                        value = None
 
             _LOGGER.debug(
                 "Update sensor %s with value %s",
-                self.entity_description.key,
+                key,
                 value,
             )
             return value
         except KeyError:
             _LOGGER.error(
-                "%s not a valid attribute (in state)",
+                "Key '%s' not found in coordinator data%s",
                 self.entity_description.key,
+                " under 'statistics'" if is_statistic_sensor else "",
+            )
+            return None
+        except Exception as e:
+            _LOGGER.error(
+                "Error processing state for sensor %s: %s",
+                self.entity_description.key,
+                e,
+                exc_info=True,
             )
             return None
 
