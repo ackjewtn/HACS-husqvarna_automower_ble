@@ -17,6 +17,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,7 +32,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Battery Level",
         key="battery_level",
-        unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=None,
@@ -40,7 +41,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Is Charging",
         key="is_charging",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -49,7 +50,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Mode",
         key="mode",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -58,7 +59,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="State",
         key="state",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -67,7 +68,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Activity",
         key="activity",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -76,7 +77,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Error",
         key="error",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -85,7 +86,7 @@ MOWER_SENSORS = [
     SensorEntityDescription(
         name="Next Start Time",
         key="next_start_time",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=None,
         entity_category=None,
@@ -97,7 +98,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total running time",
         key="totalRunningTime",
-        unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -106,7 +107,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total cutting time",
         key="totalCuttingTime",
-        unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -115,7 +116,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total charging time",
         key="totalChargingTime",
-        unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -124,7 +125,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total searching time",
         key="totalSearchingTime",
-        unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -133,7 +134,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total number of collisions",
         key="numberOfCollisions",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -142,7 +143,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total number of charging cycles",
         key="numberOfChargingCycles",
-        unit_of_measurement=None,
+        native_unit_of_measurement=None,
         device_class=None,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -151,7 +152,7 @@ MOWER_STATISTICS_SENSORS = [
     SensorEntityDescription(
         name="Total cutting blade usage",
         key="cuttingBladeUsageTime",
-        unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -200,22 +201,27 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         """Initialize the Automower sensor entity."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._attr_unique_id = f"{mower_id}_{description.key}"
-        self._attributes = {}
+        self._attr_name = description.name
+        self._attr_native_value = None
+        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
+        self._attr_device_class = description.device_class
+        self._attr_state_class = description.state_class
+        self._attr_entity_category = description.entity_category
+        self._attr_icon = description.icon
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.serial)},
+            manufacturer=coordinator.manufacturer,
+            model=coordinator.model,
+        )
 
+        self._attr_unique_id = f"{mower_id}_{description.key}"
         _LOGGER.debug(
             "Creating sensor entity: %s with unique_id: %s",
             self.entity_description.name,
             self._attr_unique_id,
         )
 
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self.entity_description.name
-
-    @property
-    def state(self):
+    def _get_state(self) -> str | None:
         """Return the state of the sensor."""
         try:
             key = self.entity_description.key
@@ -278,46 +284,15 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             return False
         return datetime.now() - last_update < timedelta(minutes=12)
 
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement of this sensor."""
-        return self.entity_description.unit_of_measurement
-
-    @property
-    def device_class(self):
-        """Return the device class of this sensor."""
-        return self.entity_description.device_class
-
-    @property
-    def state_class(self):
-        """Return the state class of this sensor."""
-        return self.entity_description.state_class
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        return self._attributes
-
-    @property
-    def entity_category(self):
-        """Return the entity category of this sensor."""
-        return self.entity_description.entity_category
-
-    @property
-    def icon(self):
-        """Return the icon of the sensor."""
-        return self.entity_description.icon
+    async def async_added_to_hass(self) -> None:
+        """Handle when the entity is added to Home Assistant."""
+        self._attr_native_value = self._get_state()
+        self._attr_available = self.available
+        await super().async_added_to_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle coordinator update."""
+        self._attr_native_value = self._get_state()
+        self._attr_available = self.available
         super()._handle_coordinator_update()
-
-    @property
-    def device_info(self) -> dict:
-        """Return device information about this entity."""
-        return {
-            "identifiers": {(DOMAIN, self.coordinator.serial)},
-            "manufacturer": self.coordinator.manufacturer,
-            "model": self.coordinator.model,
-        }

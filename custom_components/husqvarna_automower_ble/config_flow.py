@@ -81,8 +81,14 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 channel_id = random.randint(1, 0xFFFFFFFF)
 
+                def _init_mower() -> Mower:
+                    """Initialize the Mower object."""
+                    return Mower(
+                        channel_id, self.address, self.pin if self.pin != 0 else None
+                    )
+
                 try:
-                    mower = Mower(channel_id, self.address, self.pin)
+                    mower = await self.hass.async_add_executor_job(_init_mower)
                     manufacture, device_type, model = await mower.probe_gatts(device)
                 except (BleakError, TimeoutError) as exception:
                     _LOGGER.error(

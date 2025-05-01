@@ -33,11 +33,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     LOGGER.info(STARTUP_MESSAGE)
 
-    # Create the Mower instance
-    mower = Mower(channel_id, address, pin) if pin != 0 else Mower(channel_id, address)
+    # Create the Mower instance in the executor to avoid blocking I/O
+    def _init_mower() -> Mower:
+        """Initialize the Mower object."""
+        return Mower(channel_id, address, pin if pin != 0 else None)
+
+    try:
+        mower = await hass.async_add_executor_job(_init_mower)
+    except Exception as ex:
+        LOGGER.exception(f"Failed to initialize Mower object: {ex}")
+        raise ConfigEntryNotReady("Failed to initialize Mower object") from ex
 
     # Close stale BLE connections
-    await close_stale_connections_by_address(address)
+    try:
+        await close_stale_connections_by_address(address)
+    except Exception as ex:
+        LOGGER.warning(f"Failed to close stale BLE connections for {address}: {ex}")
 
     LOGGER.debug(
         f"Connecting to {address} with channel ID {channel_id} and pin {pin if pin != 0 else 'None'}"
@@ -50,10 +61,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) or await get_device(address)
         if not await mower.connect(device):
             LOGGER.error(f"Failed to connect to device at {address}")
-            raise ConfigEntryNotReady("Couldn't find device")
+            raise ConfigEntryNotReady("Couldn't find or connect to device")
     except (BleakError, TimeoutError) as ex:
         LOGGER.exception(f"Error connecting to device at {address}: {ex}")
-        raise ConfigEntryNotReady("Couldn't find device") from ex
+        raise ConfigEntryNotReady("Couldn't find or connect to device") from ex
 
     LOGGER.debug("Connected and paired successfully")
 
@@ -91,7 +102,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator: HusqvarnaCoordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
         if coordinator:
-            await coordinator.async_shutdown()
+            try:
+                await coordinator.async_shutdown()
+            except Exception as ex:
+                LOGGER.warning(
+                    f"Error during coordinator shutdown for entry {entry.entry_id}: {ex}"
+                )
         else:
             LOGGER.warning(
                 f"Coordinator for entry {entry.entry_id} not found during unload"
