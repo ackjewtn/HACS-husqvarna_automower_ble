@@ -7,12 +7,12 @@
       "service_uuid": "98bd0001-0b0e-421a-84e5-ddbf75dc6de4"
     }
   ],
-  "codeowners": ["@Marbanz", "@andyb2000", "@alistair23"],
+  "codeowners": ["@Marbanz"],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
   "documentation": "https://github.com/Marbanz/HACS-husqvarna_automower_ble/",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Marbanz/HACS-husqvarna_automower_ble/issues",
   "requirements": ["husqvarna-automower-ble==1.1.6"],
-  "version": "1.1.4"
+  "version": "1.1.5"
 }
