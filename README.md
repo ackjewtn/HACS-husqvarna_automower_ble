@@ -4,7 +4,7 @@
 
 This Home Assistant integration allows you to control Husqvarna Bluetooth-enabled automowers (e.g., Easilife Go and other models using Husqvarna internal boards) via Bluetooth Low Energy (BLE).
 
-It is based on the BLE implementation available at [HusqvarnaAutoMower-BLE](https://github.com/Marbanz/HusqvarnaAutoMower-BLE).
+It is based on the BLE implementation available at [HusqvarnaAutoMower-BLE](https://github.com/Marbanz/HusqvarnaAutoMower-BLE) which was originally developed by @alistair23.
 
 ---
 
