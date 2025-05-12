@@ -267,13 +267,19 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return if the sensor is available."""
+        # Check if this sensor is a statistics sensor
+        is_statistic_sensor = any(
+            desc.key == self.entity_description.key for desc in MOWER_STATISTICS_SENSORS
+        )
         last_update = self.coordinator._last_successful_update
         if last_update is None:
             return False
-        return (
-            self._attr_native_value is not None
-            and datetime.now() - last_update < timedelta(minutes=12)
-        )
+        if is_statistic_sensor:
+            return (
+                self._attr_native_value is not None
+                and datetime.now() - last_update < timedelta(minutes=12)
+            )
+        return datetime.now() - last_update < timedelta(minutes=12)
 
     async def async_added_to_hass(self) -> None:
         """Handle when the entity is added to Home Assistant."""
