@@ -173,15 +173,8 @@ async def async_setup_entry(
         AutomowerSensorEntity(
             coordinator, description, "automower_" + format_mac(coordinator.address)
         )
-        for description in MOWER_SENSORS
+        for description in MOWER_SENSORS + MOWER_STATISTICS_SENSORS
     ]
-    if coordinator.data.get("statistics") is not None:
-        sensors += [
-            AutomowerSensorEntity(
-                coordinator, description, "automower_" + format_mac(coordinator.address)
-            )
-            for description in MOWER_STATISTICS_SENSORS
-        ]
     if not sensors:
         _LOGGER.error("No sensors were created. Check MOWER_SENSORS.")
     async_add_entities(sensors)
@@ -233,7 +226,9 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             if is_statistic_sensor:
                 # Access value from the nested 'statistics' dictionary
                 stats_data = self.coordinator.data.get("statistics", {})
-                value = stats_data[key]
+                # Check if the key exists in the statistics data
+                # If not return None
+                value = stats_data.get(key, None)
             else:
                 value = self.coordinator.data[key]
                 if key == "mode":
@@ -260,13 +255,6 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
                 value,
             )
             return value
-        except KeyError:
-            _LOGGER.error(
-                "Key '%s' not found in coordinator data%s",
-                self.entity_description.key,
-                " under 'statistics'" if is_statistic_sensor else "",
-            )
-            return None
         except Exception as e:
             _LOGGER.error(
                 "Error processing state for sensor %s: %s",
@@ -282,7 +270,10 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
         last_update = self.coordinator._last_successful_update
         if last_update is None:
             return False
-        return datetime.now() - last_update < timedelta(minutes=12)
+        return (
+            self._attr_native_value is not None
+            and datetime.now() - last_update < timedelta(minutes=12)
+        )
 
     async def async_added_to_hass(self) -> None:
         """Handle when the entity is added to Home Assistant."""
