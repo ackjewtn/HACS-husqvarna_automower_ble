@@ -26,7 +26,18 @@ def _is_supported(discovery_info: BluetoothServiceInfo) -> bool:
         discovery_info.address,
         discovery_info.manufacturer_data,
     )
-    return any(key == 1062 for key in discovery_info.manufacturer_data)
+
+    manufacturer = any(key == 1062 for key in discovery_info.manufacturer_data)
+    service_husqvarna = any(
+        service == "98bd0001-0b0e-421a-84e5-ddbf75dc6de4"
+        for service in discovery_info.service_uuids
+    )
+    service_generic = any(
+        service == "00001800-0000-1000-8000-00805f9b34fb"
+        for service in discovery_info.service_uuids
+    )
+
+    return manufacturer and service_husqvarna and service_generic
 
 
 class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
