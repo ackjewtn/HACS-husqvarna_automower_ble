@@ -51,7 +51,7 @@ It is based on the BLE implementation available at [HusqvarnaAutoMower-BLE](http
 2. Enter the mower's **MAC address** and **PIN**:
    - **MAC Address**: If not autodiscovered, retrieve it from the official app or mower settings.
    - **PIN**: See the **PIN Codes** section below for details.
-3. Before entering the MAC address:
+3. Before submitting:
    - Power off your mower.
    - Power it back on to enable Bluetooth pairing mode (active for ~2 minutes).
 4. Click **Submit** to complete the setup.
