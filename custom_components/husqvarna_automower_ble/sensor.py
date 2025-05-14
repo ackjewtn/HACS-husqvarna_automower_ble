@@ -149,15 +149,6 @@ MOWER_STATISTICS_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:repeat-variant",
     ),
-    SensorEntityDescription(
-        name="Total cutting blade usage",
-        key="cuttingBladeUsageTime",
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        device_class=SensorDeviceClass.DURATION,
-        state_class=SensorStateClass.TOTAL,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:fan",
-    ),
 ]
 
 
@@ -226,9 +217,7 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
             if is_statistic_sensor:
                 # Access value from the nested 'statistics' dictionary
                 stats_data = self.coordinator.data.get("statistics", {})
-                # Check if the key exists in the statistics data
-                # If not return None
-                value = stats_data.get(key, None)
+                value = stats_data[key]
             else:
                 value = self.coordinator.data[key]
                 if key == "mode":
@@ -267,18 +256,9 @@ class AutomowerSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return if the sensor is available."""
-        # Check if this sensor is a statistics sensor
-        is_statistic_sensor = any(
-            desc.key == self.entity_description.key for desc in MOWER_STATISTICS_SENSORS
-        )
         last_update = self.coordinator._last_successful_update
         if last_update is None:
             return False
-        if is_statistic_sensor:
-            return (
-                self._attr_native_value is not None
-                and datetime.now() - last_update < timedelta(minutes=12)
-            )
         return datetime.now() - last_update < timedelta(minutes=12)
 
     async def async_added_to_hass(self) -> None:

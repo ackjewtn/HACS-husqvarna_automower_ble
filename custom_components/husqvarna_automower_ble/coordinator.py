@@ -97,11 +97,8 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             data["next_start_time"] = await self.mower.mower_next_start_time()
 
             # Fetch mower statistics
-            try:
-                stats = await self.mower.mower_statistics()
-                data["statistics"] = stats
-            except Exception as ex:
-                _LOGGER.warning("Error fetching mower statistics: %s", ex)
+            stats = await self.mower.mower_statistics()
+            data["statistics"] = stats
 
             self._last_successful_update = datetime.now()
 
