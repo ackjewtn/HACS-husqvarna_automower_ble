@@ -6,6 +6,7 @@ from datetime import timedelta, datetime
 import logging
 from typing import Any
 
+from bleak_retry_connector import get_device
 from husqvarna_automower_ble.mower import Mower
 from bleak import BleakError
 
@@ -64,7 +65,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         device = bluetooth.async_ble_device_from_address(
             self.hass, self.address, connectable=True
-        )
+        ) or await get_device(self.address)
         if not device:
             _LOGGER.error("Failed to find device with address: %s", self.address)
             raise UpdateFailed("Can't find device")
