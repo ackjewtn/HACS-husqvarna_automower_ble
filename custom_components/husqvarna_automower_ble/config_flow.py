@@ -7,7 +7,7 @@ import random
 from typing import Any
 
 from husqvarna_automower_ble.mower import Mower
-from bleak.exc import BleakDBusError, BleakError
+from bleak.exc import BleakError
 import voluptuous as vol
 
 from homeassistant.components import bluetooth
@@ -97,7 +97,7 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                 try:
                     mower = await self.hass.async_add_executor_job(_init_mower)
                     manufacture, device_type, model = await mower.probe_gatts(device)
-                except (BleakDBusError, BleakError, TimeoutError) as exception:
+                except (BleakError, TimeoutError) as exception:
                     _LOGGER.error(
                         "Failed to connect to device at %s: %s", self.address, exception
                     )
