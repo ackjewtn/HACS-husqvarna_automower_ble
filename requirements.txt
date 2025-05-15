@@ -1,2 +1,2 @@
-husqvarna-automower-ble==1.1.8
+husqvarna-automower-ble==1.2.0
 homeassistant>=2025.1.0
