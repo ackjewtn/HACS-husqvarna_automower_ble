@@ -116,3 +116,4 @@ These services can be accessed via **Actions** in the Home Assistant UI or can b
 - Ensure the mower is powered on and in Bluetooth pairing mode (active for ~2 minutes after powering on).
 - If pairing fails, try restarting the mower and repeating the setup process.
 - Move closer to the mower to ensure a strong Bluetooth signal.
+- If you are using an ESPHome Bluetooth Proxy and pairing fails, try resetting the proxy before retrying.

@@ -15,7 +15,7 @@
       "invalid_pin": "Invalid PIN code entered",
       "already_configured": "Device is already configured",
       "device_not_found": "Device not found. Make sure the mower is powered on and within range",
-      "cannot_connect": "Cannot connect to the mower via Bluetooth. Check the address and try again",
+      "cannot_connect": "Cannot connect to the mower via Bluetooth. Make sure the mower is in pairing mode",
       "invalid_connection": "Failed to establish connection with the mower. This is often caused by an incorrect PIN code",
       "exception": "An unexpected error occurred with the BLE component"
     },
