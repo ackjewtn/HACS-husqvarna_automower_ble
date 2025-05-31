@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from husqvarna_automower_ble.protocol import MowerActivity, MowerState
@@ -148,6 +149,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_resume()
         if self._attr_activity == LawnMowerActivity.DOCKED:
             await self.coordinator.mower.mower_override()
+        await asyncio.sleep(1)
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -161,6 +163,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_park()
+        await asyncio.sleep(1)
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -174,6 +177,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_pause()
+        await asyncio.sleep(1)
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -187,6 +191,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_park_indefinitely()
+        await asyncio.sleep(1)
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -200,6 +205,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_auto()
+        await asyncio.sleep(1)
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
