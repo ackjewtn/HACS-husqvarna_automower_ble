@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from husqvarna_automower_ble.mower import Mower
+from husqvarna_automower_ble.protocol import ResponseResult
 from bleak import BleakError
 from bleak_retry_connector import close_stale_connections_by_address, get_device
 
@@ -33,11 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info(STARTUP_MESSAGE)
 
-    def init_mower() -> Mower:
-        """Initialize the Mower object."""
-        return Mower(channel_id, address, pin)
-
-    mower = await hass.async_add_executor_job(init_mower)
+    mower = Mower(channel_id, address, pin)
 
     await close_stale_connections_by_address(address)
 
@@ -55,9 +52,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("No BLE device found at %s", address)
             raise ConfigEntryNotReady(f"No BLE device found at {address}")
 
-        if not await mower.connect(device):
-            _LOGGER.error("Failed to connect to device at %s", address)
-            raise ConfigEntryNotReady(f"Failed to connect to device at {address}")
+        response_result = await mower.connect(device)
+        if response_result != ResponseResult.OK:
+            raise ConfigEntryNotReady(
+                f"Unable to connect to device {address}, mower returned {response_result}"
+            )
     except (BleakError, TimeoutError) as ex:
         _LOGGER.exception("Error connecting to device at %s: %s", address, ex)
         raise ConfigEntryNotReady(f"Connection error: {ex}") from ex
