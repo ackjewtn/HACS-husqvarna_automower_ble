@@ -8,6 +8,7 @@ from typing import Any
 
 from bleak_retry_connector import get_device
 from husqvarna_automower_ble.mower import Mower
+from husqvarna_automower_ble.protocol import ResponseResult
 from bleak import BleakError
 
 from homeassistant.components import bluetooth
@@ -71,7 +72,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("Can't find device")
 
         try:
-            if not await self.mower.connect(device):
+            if await self.mower.connect(device) is not ResponseResult.OK:
                 _LOGGER.error("Failed to connect to the mower")
                 raise UpdateFailed("Failed to connect")
         except (TimeoutError, BleakError) as ex:

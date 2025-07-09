@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from bleak_retry_connector import get_device
 from husqvarna_automower_ble.protocol import MowerActivity, MowerState
+from husqvarna_automower_ble.protocol import ResponseResult
 
 from homeassistant.components import bluetooth
 from homeassistant.components.lawn_mower import (
@@ -219,13 +221,13 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         _LOGGER.debug("Attempting to connect to mower")
         device = bluetooth.async_ble_device_from_address(
             self.coordinator.hass, self.coordinator.address, connectable=True
-        )
+        ) or await get_device(self.coordinator.address)
         if not device:
             _LOGGER.error("Failed to find BLE device for mower")
             return False
 
-        if not await self.coordinator.mower.connect(device):
-            _LOGGER.error("Failed to connect to mower")
-            return False
+        if await self.coordinator.mower.connect(device) is not ResponseResult.OK:
+                _LOGGER.error("Failed to connect to mower")
+                return False
 
         return True
