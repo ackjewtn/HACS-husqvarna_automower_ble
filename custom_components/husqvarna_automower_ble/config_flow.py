@@ -84,31 +84,21 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
         _LOGGER.debug("Entering user input step")
 
         errors = {}
-        user_step = self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_ADDRESS, default=self.address): str,
-                    vol.Optional(CONF_PIN): int,
-                },
-            ),
-            errors=errors,
-        )
 
-        if user_input is not None:
-            self.address = user_input[CONF_ADDRESS]
-            self.pin = user_input.get(CONF_PIN)
-        else:
-            return user_step
+        if user_input is None:
+            return self._show_user_form(errors)
+
+        self.address = user_input[CONF_ADDRESS]
+        self.pin = user_input.get(CONF_PIN)
 
         # Validate the Bluetooth address and PIN
         if not self.address or not _is_valid_bluetooth_address(self.address):
             errors["base"] = "invalid_address_format"
-            return user_step
+            return self._show_user_form(errors)
 
         if self.pin is not None and (not isinstance(self.pin, int) or self.pin < 0):
             errors["base"] = "invalid_pin_format"
-            return user_step
+            return self._show_user_form(errors)
 
         await self.async_set_unique_id(self.address, raise_on_progress=False)
         self._abort_if_unique_id_configured()
@@ -121,7 +111,7 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
             if not device:
                 _LOGGER.error("Device not found: %s", self.address)
                 errors["base"] = "device_not_found"
-                return user_step
+                return self._show_user_form(errors)
 
             channel_id = random.randint(1, 0xFFFFFFFF)
             mower = Mower(channel_id, self.address, self.pin)
@@ -131,7 +121,7 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
             if manufacture is None or device_type is None:
                 _LOGGER.error("Failed to probe device %s", self.address)
                 errors["base"] = "cannot_connect"
-                return user_step
+                return self._show_user_form(errors)
 
             # Attempt to connect to the device
             response_result = await mower.connect(device)
@@ -144,19 +134,13 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "invalid_auth"
                 else:
                     errors["base"] = "cannot_connect"
-                return user_step
+                return self._show_user_form(errors)
 
             # Disconnect from the device
             await mower.disconnect()
 
             _LOGGER.debug("Successfully probed and connected to %s", self.address)
-        except (BleakError, TimeoutError) as ex:
-            _LOGGER.error("Failed to connect to device at %s: %s", self.address, ex)
-            errors["base"] = "cannot_connect"
-        except Exception as ex:
-            _LOGGER.exception("Unexpected error: %s", ex)
-            errors["base"] = "exception"
-        else:
+
             # Create the configuration entry
             title = f"{manufacture} {device_type.replace(chr(0), '')}"
             _LOGGER.info("Creating configuration entry with title: %s", title)
@@ -169,4 +153,28 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
                 },
             )
 
-        return user_step
+        except (BleakError, TimeoutError) as ex:
+            _LOGGER.error("Failed to connect to device at %s: %s", self.address, ex)
+            errors["base"] = "cannot_connect"
+        except Exception as ex:
+            _LOGGER.exception("Unexpected error: %s", ex)
+            errors["base"] = "exception"
+
+        return self._show_user_form(errors)
+
+    def _get_user_form_schema(self) -> vol.Schema:
+        """Get the user form schema."""
+        return vol.Schema(
+            {
+                vol.Required(CONF_ADDRESS, default=self.address): str,
+                vol.Optional(CONF_PIN): int,
+            },
+        )
+
+    def _show_user_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
+        """Show the user form with optional errors."""
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self._get_user_form_schema(),
+            errors=errors or {},
+        )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Any
 
@@ -35,7 +35,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         address: str,
         manufacturer: str,
         model: str,
-        channel_id: str,
+        channel_id: int,
         serial: str,
     ) -> None:
         """Initialize global data updater."""
@@ -72,7 +72,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("Can't find device")
 
         try:
-            if await self.mower.connect(device) is not ResponseResult.OK:
+            if await self.mower.connect(device) != ResponseResult.OK:
                 _LOGGER.error("Failed to connect to the mower")
                 raise UpdateFailed("Failed to connect")
         except (TimeoutError, BleakError) as ex:

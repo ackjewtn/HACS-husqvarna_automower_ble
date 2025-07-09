@@ -227,7 +227,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return False
 
         if await self.coordinator.mower.connect(device) is not ResponseResult.OK:
-                _LOGGER.error("Failed to connect to mower")
-                return False
+            _LOGGER.error("Failed to connect to mower")
+            return False
 
         return True
