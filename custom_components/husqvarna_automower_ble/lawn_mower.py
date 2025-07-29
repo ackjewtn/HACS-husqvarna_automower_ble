@@ -151,7 +151,14 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         await self.coordinator.mower.mower_resume()
         if self._attr_activity == LawnMowerActivity.DOCKED:
             await self.coordinator.mower.mower_override()
-        await asyncio.sleep(1)
+
+        # Wait a bit longer for the mower to process the command
+        await asyncio.sleep(2)
+
+        # Manually disconnect and reconnect to ensure fresh state
+        if self.coordinator.mower.is_connected():
+            await self.coordinator.mower.disconnect()
+
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -165,7 +172,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_park()
-        await asyncio.sleep(1)
+
+        await asyncio.sleep(2)
+
+        if self.coordinator.mower.is_connected():
+            await self.coordinator.mower.disconnect()
+
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -179,7 +191,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_pause()
-        await asyncio.sleep(1)
+
+        await asyncio.sleep(2)
+
+        if self.coordinator.mower.is_connected():
+            await self.coordinator.mower.disconnect()
+
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -193,7 +210,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_park_indefinitely()
-        await asyncio.sleep(1)
+
+        await asyncio.sleep(2)
+
+        if self.coordinator.mower.is_connected():
+            await self.coordinator.mower.disconnect()
+
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()
@@ -207,7 +229,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
             return
 
         await self.coordinator.mower.mower_auto()
-        await asyncio.sleep(1)
+
+        await asyncio.sleep(2)
+
+        if self.coordinator.mower.is_connected():
+            await self.coordinator.mower.disconnect()
+
         await self.coordinator.async_request_refresh()
 
         self._attr_activity = self._get_activity()

@@ -22,7 +22,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=300)
+SCAN_INTERVAL = timedelta(seconds=60)
 
 
 class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
