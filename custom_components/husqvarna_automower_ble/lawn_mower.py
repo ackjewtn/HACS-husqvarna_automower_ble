@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from bleak_retry_connector import get_device
@@ -145,22 +144,14 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Start mowing."""
         _LOGGER.debug("Starting mower")
 
-        if not await self._ensure_connected():
-            return
+        async def command():
+            if not await self._ensure_connected():
+                return
+            await self.coordinator.mower.mower_resume()
+            if self._attr_activity == LawnMowerActivity.DOCKED:
+                await self.coordinator.mower.mower_override()
 
-        await self.coordinator.mower.mower_resume()
-        if self._attr_activity == LawnMowerActivity.DOCKED:
-            await self.coordinator.mower.mower_override()
-
-        # Wait a bit longer for the mower to process the command
-        await asyncio.sleep(2)
-
-        # Manually disconnect and reconnect to ensure fresh state
-        if self.coordinator.mower.is_connected():
-            await self.coordinator.mower.disconnect()
-
-        await self.coordinator.async_request_refresh()
-
+        await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 
@@ -168,18 +159,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Start docking."""
         _LOGGER.debug("Docking mower")
 
-        if not await self._ensure_connected():
-            return
+        async def command():
+            if not await self._ensure_connected():
+                return
+            await self.coordinator.mower.mower_park()
 
-        await self.coordinator.mower.mower_park()
-
-        await asyncio.sleep(2)
-
-        if self.coordinator.mower.is_connected():
-            await self.coordinator.mower.disconnect()
-
-        await self.coordinator.async_request_refresh()
-
+        await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 
@@ -187,18 +172,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Pause mower."""
         _LOGGER.debug("Pausing mower")
 
-        if not await self._ensure_connected():
-            return
+        async def command():
+            if not await self._ensure_connected():
+                return
+            await self.coordinator.mower.mower_pause()
 
-        await self.coordinator.mower.mower_pause()
-
-        await asyncio.sleep(2)
-
-        if self.coordinator.mower.is_connected():
-            await self.coordinator.mower.disconnect()
-
-        await self.coordinator.async_request_refresh()
-
+        await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 
@@ -206,18 +185,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Park mower indefinitely."""
         _LOGGER.debug("Parking mower indefinitely")
 
-        if not await self._ensure_connected():
-            return
+        async def command():
+            if not await self._ensure_connected():
+                return
+            await self.coordinator.mower.mower_park_indefinitely()
 
-        await self.coordinator.mower.mower_park_indefinitely()
-
-        await asyncio.sleep(2)
-
-        if self.coordinator.mower.is_connected():
-            await self.coordinator.mower.disconnect()
-
-        await self.coordinator.async_request_refresh()
-
+        await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 
@@ -225,18 +198,12 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         """Resume mower schedule."""
         _LOGGER.debug("Resuming mower schedule")
 
-        if not await self._ensure_connected():
-            return
+        async def command():
+            if not await self._ensure_connected():
+                return
+            await self.coordinator.mower.mower_auto()
 
-        await self.coordinator.mower.mower_auto()
-
-        await asyncio.sleep(2)
-
-        if self.coordinator.mower.is_connected():
-            await self.coordinator.mower.disconnect()
-
-        await self.coordinator.async_request_refresh()
-
+        await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
         self.async_write_ha_state()
 

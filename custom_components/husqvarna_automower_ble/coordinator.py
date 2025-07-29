@@ -1,7 +1,7 @@
 """Provides the DataUpdateCoordinator."""
 
 from __future__ import annotations
-
+import asyncio
 from datetime import datetime, timedelta
 import logging
 from typing import Any
@@ -52,6 +52,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.channel_id = channel_id
         self.serial = serial
         self._last_successful_update: datetime | None = None
+        self._command_in_progress = False
 
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and any connection."""
@@ -78,6 +79,22 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except (TimeoutError, BleakError) as ex:
             _LOGGER.error("Error during connection attempt: %s", ex)
             raise UpdateFailed("Failed to connect") from ex
+
+    async def execute_command_with_refresh(self, command_func):
+        """Execute a mower command and refresh data while maintaining connection."""
+        self._command_in_progress = True
+        try:
+            # Execute the command
+            await command_func()
+
+            # Wait for command to be processed
+            await asyncio.sleep(1)
+
+            # Force a data refresh without disconnecting
+            await self.async_request_refresh()
+
+        finally:
+            self._command_in_progress = False
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Poll the device for updated data."""
@@ -115,8 +132,8 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.async_update_listeners()
             raise UpdateFailed("Unexpected error fetching data") from ex
         finally:
-            # Ensure the mower is disconnected after polling
-            if self.mower.is_connected():
+            # Only disconnect if no command is in progress
+            if not self._command_in_progress and self.mower.is_connected():
                 await self.mower.disconnect()
 
         return data
