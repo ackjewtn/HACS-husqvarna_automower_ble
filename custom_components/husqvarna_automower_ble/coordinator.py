@@ -88,7 +88,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await command_func()
 
             # Wait for command to be processed
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
             # Force a data refresh without disconnecting
             await self.async_request_refresh()
