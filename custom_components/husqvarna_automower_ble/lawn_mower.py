@@ -140,71 +140,83 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
         self._attr_available = self._attr_activity is not None and self.available
         super()._handle_coordinator_update()
 
-    async def async_start_mowing(self) -> None:
-        """Start mowing."""
-        _LOGGER.debug("Starting mower")
+    async def async_dock(self) -> None:
+        """Start docking."""
+        _LOGGER.debug("Docking mower - current activity: %s", self._attr_activity)
 
         async def command():
-            if not await self._ensure_connected():
-                return
+            _LOGGER.debug("Sending park command to mower")
+            await self.coordinator.mower.mower_park()
+
+        await self.coordinator.execute_command_with_refresh(command)
+
+        # Update the state after refresh
+        self._attr_activity = self._get_activity()
+        _LOGGER.debug("Updated activity after dock command: %s", self._attr_activity)
+        self.async_write_ha_state()
+
+    async def async_start_mowing(self) -> None:
+        """Start mowing."""
+        _LOGGER.debug("Starting mower - current activity: %s", self._attr_activity)
+
+        async def command():
+            _LOGGER.debug("Sending resume/override commands to mower")
             await self.coordinator.mower.mower_resume()
             if self._attr_activity == LawnMowerActivity.DOCKED:
                 await self.coordinator.mower.mower_override()
 
         await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
-        self.async_write_ha_state()
-
-    async def async_dock(self) -> None:
-        """Start docking."""
-        _LOGGER.debug("Docking mower")
-
-        async def command():
-            if not await self._ensure_connected():
-                return
-            await self.coordinator.mower.mower_park()
-
-        await self.coordinator.execute_command_with_refresh(command)
-        self._attr_activity = self._get_activity()
+        _LOGGER.debug(
+            "Updated activity after start mowing command: %s", self._attr_activity
+        )
         self.async_write_ha_state()
 
     async def async_pause(self) -> None:
         """Pause mower."""
-        _LOGGER.debug("Pausing mower")
+        _LOGGER.debug("Pausing mower - current activity: %s", self._attr_activity)
 
         async def command():
-            if not await self._ensure_connected():
-                return
+            _LOGGER.debug("Sending pause command to mower")
             await self.coordinator.mower.mower_pause()
 
         await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
+        _LOGGER.debug("Updated activity after pause command: %s", self._attr_activity)
         self.async_write_ha_state()
 
     async def async_park_indefinitely(self) -> None:
         """Park mower indefinitely."""
-        _LOGGER.debug("Parking mower indefinitely")
+        _LOGGER.debug(
+            "Parking mower indefinitely - current activity: %s", self._attr_activity
+        )
 
         async def command():
-            if not await self._ensure_connected():
-                return
+            _LOGGER.debug("Sending park indefinitely command to mower")
             await self.coordinator.mower.mower_park_indefinitely()
 
         await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
+        _LOGGER.debug(
+            "Updated activity after park indefinitely command: %s", self._attr_activity
+        )
         self.async_write_ha_state()
 
     async def async_resume_schedule(self) -> None:
         """Resume mower schedule."""
-        _LOGGER.debug("Resuming mower schedule")
+        _LOGGER.debug(
+            "Resuming mower schedule - current activity: %s", self._attr_activity
+        )
 
         async def command():
-            if not await self._ensure_connected():
-                return
+            _LOGGER.debug("Sending auto command to mower")
             await self.coordinator.mower.mower_auto()
 
         await self.coordinator.execute_command_with_refresh(command)
         self._attr_activity = self._get_activity()
+        _LOGGER.debug(
+            "Updated activity after resume schedule command: %s", self._attr_activity
+        )
         self.async_write_ha_state()
 
     async def _ensure_connected(self) -> bool:
