@@ -80,39 +80,38 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.error("Error during connection attempt: %s", ex)
             raise UpdateFailed("Failed to connect") from ex
 
+    async def execute_command_with_refresh(self, command_func):
+        """Execute a mower command and refresh data while maintaining connection."""
+        _LOGGER.debug("Starting command execution with refresh")
+        self._command_in_progress = True
+        try:
+            # Ensure we're connected before executing the command
+            if not self.mower.is_connected():
+                _LOGGER.debug("Mower not connected, connecting for command execution")
+                await self._async_find_device()
 
-async def execute_command_with_refresh(self, command_func):
-    """Execute a mower command and refresh data while maintaining connection."""
-    _LOGGER.debug("Starting command execution with refresh")
-    self._command_in_progress = True
-    try:
-        # Ensure we're connected before executing the command
-        if not self.mower.is_connected():
-            _LOGGER.debug("Mower not connected, connecting for command execution")
-            await self._async_find_device()
+            # Execute the command
+            _LOGGER.debug("Executing command function")
+            await command_func()
 
-        # Execute the command
-        _LOGGER.debug("Executing command function")
-        await command_func()
+            # Wait for command to be processed by the mower
+            _LOGGER.debug("Waiting for mower to process command")
+            await asyncio.sleep(3)
 
-        # Wait for command to be processed by the mower
-        _LOGGER.debug("Waiting for mower to process command")
-        await asyncio.sleep(3)
+            # Force a data refresh while maintaining connection
+            _LOGGER.debug("Requesting data refresh")
+            await self.async_request_refresh()
+            _LOGGER.debug("Data refresh completed")
 
-        # Force a data refresh while maintaining connection
-        _LOGGER.debug("Requesting data refresh")
-        await self.async_request_refresh()
-        _LOGGER.debug("Data refresh completed")
-
-    except Exception as ex:
-        _LOGGER.error("Error during command execution: %s", ex)
-        # Disconnect on error to ensure clean state
-        if self.mower.is_connected():
-            await self.mower.disconnect()
-        raise
-    finally:
-        self._command_in_progress = False
-        _LOGGER.debug("Command execution finished")
+        except Exception as ex:
+            _LOGGER.error("Error during command execution: %s", ex)
+            # Disconnect on error to ensure clean state
+            if self.mower.is_connected():
+                await self.mower.disconnect()
+            raise
+        finally:
+            self._command_in_progress = False
+            _LOGGER.debug("Command execution finished")
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Poll the device for updated data."""
